@@ -88,24 +88,28 @@ print_segment(){
   local i
   case $angle in
     0)
-      for ((i = 0; i < 2*(segment_length-1); i++)); do
-        (( x ++ ))
+      (( x ++ ))
+      for ((i = 0; i < 2*segment_length-1; i++)); do
         print_char $x $y "━" cyan
+        (( x ++ ))
       done;;
     90)
+      (( y ++ ))
       for ((i = 0; i < segment_length-1; i++)); do
-        (( y ++ ))
         print_char $x $y "┃" cyan
+        (( y ++ ))
       done;;
     180)
-      for ((i = 0; i < 2*(segment_length-1); i++)); do
-        (( x -- ))
+      (( x -- ))
+      for ((i = 0; i < 2*segment_length-1; i++)); do
         print_char $x $y "━" cyan
+        (( x -- ))
       done;;
     270)
+      (( y -- ))
       for ((i = 0; i < segment_length-1; i++)); do
-        (( y -- ))
         print_char $x $y "┃" cyan
+        (( y -- ))
       done;;
   esac
 }
