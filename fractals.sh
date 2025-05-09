@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Obtain input parameters
+order=$1
+
 # Definition of the L-System for the Hilbert Curve
 axiom="A"
 A="+BF-AFA-FB+"
@@ -9,10 +12,45 @@ E=""
 F=""
 G=""
 initial_angle=0
-initial_x=45
-initial_y=3
-segment_length=3
-order=4
+initial_x="0.0" # Must be a number between 0 and 1 because it's relative to the size of the fractal. It has to be a string because bash does not support floating point numbers for some reason.
+initial_y="0.0"
+scale=(1 3 7 15 31 63 127 255) # How much the size of the segment scales down when increasing the order. Can be an array or a number
+
+# This function is used for checking if scale is an array
+is_array() {
+  declare -p "$1" 2>/dev/null | grep -q 'declare \-a'
+}
+
+# Calculate size of terminal
+width=$(($(tput cols) - 1 ))
+height=$(($(tput lines) - 1 ))
+
+# Calculate max size of fractal based on size of terminal (width is diveded by 2 because usually line_height=2*character_width in terminals)
+max_size=$(( width/2 < height ? width/2 : height ))
+
+# Calculate segment length and order based on max size
+count=0
+segment_length=$max_size
+while (( segment_length >= 2 && count < order )); do
+  if $( is_array scale ); then
+    (( segment_length = $max_size / ${scale[$count]} ))
+  else
+    (( segment_length /= $scale ))
+  fi
+  (( count ++ ))
+done
+order=$count
+
+# Calculate size of fractal based on segment length
+if $( is_array scale ); then
+  size=$(( ${scale[$order - 1]} * $segment_length))
+else
+  size=$(( $scale ** $order * $segment_length))
+fi
+
+# Calculate initial position based on size of fractal. Have to use awk here because again bash does not support floating point arithmatic
+initial_x=$(( ($width - $size * 2) / 2 + $(awk "BEGIN { print int($initial_x * $size) }") + 1 ))
+initial_y=$(( ($height - $size) / 2 + $(awk "BEGIN { print int($initial_y * $size) }") + 1 ))
 
 declare -A char_map
 # This maps angles to characters
