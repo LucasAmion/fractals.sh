@@ -120,8 +120,8 @@ print_corner(){
   print_char $x $y $char cyan
 }
 
-# Function that prints one segment
-print_segment(){
+# Function that prints an edge
+print_edge(){
   read -t 0.05 -n 1 2>/dev/null
   local i
   case $angle in
