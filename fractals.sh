@@ -146,30 +146,31 @@ print_corner(){
 
 # Function that prints an edge
 print_edge(){
+  char=${char_map["$initial_angle,$angle"]}
   local i
   case $angle in
     0)
       (( x ++ ))
       for ((i = 0; i < 2*segment_length-1; i++)); do
-        print_char $x $y "━" cyan
+        print_char $x $y $char cyan
         (( x ++ ))
       done;;
     90)
       (( y ++ ))
       for ((i = 0; i < segment_length-1; i++)); do
-        print_char $x $y "┃" cyan
+        print_char $x $y $char cyan
         (( y ++ ))
       done;;
     180)
       (( x -- ))
       for ((i = 0; i < 2*segment_length-1; i++)); do
-        print_char $x $y "━" cyan
+        print_char $x $y $char cyan
         (( x -- ))
       done;;
     270)
       (( y -- ))
       for ((i = 0; i < segment_length-1; i++)); do
-        print_char $x $y "┃" cyan
+        print_char $x $y $char cyan
         (( y -- ))
       done;;
   esac
