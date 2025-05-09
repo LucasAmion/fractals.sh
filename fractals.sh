@@ -21,6 +21,17 @@ is_array() {
   declare -p "$1" 2>/dev/null | grep -q 'declare \-a'
 }
 
+# Skip order 0 if there is nothing to print
+number_of_Fs=0
+for (( i=0; i < ${#axiom}; i++ )); do
+  if [ ${axiom:i:1} = "F" ]; then
+    (( number_of_Fs ++ ))
+  fi
+done
+if [ $number_of_Fs = 0 ]; then
+  (( order ++ ))
+fi
+
 # Calculate size of terminal
 width=$(($(tput cols) - 1 ))
 height=$(($(tput lines) - 1 ))
