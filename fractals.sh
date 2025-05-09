@@ -12,7 +12,7 @@ initial_angle=0
 initial_x=45
 initial_y=3
 segment_length=3
-order=3
+order=4
 
 declare -A char_map
 # This maps angles to characters
@@ -135,7 +135,7 @@ tput civis # Hide cursor
 
 # Expand the axiom
 i=0
-for ((i = 0; i <= order; i++)); do
+for ((i = 0; i < order; i++)); do
   expand
 done
 
