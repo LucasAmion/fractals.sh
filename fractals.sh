@@ -14,8 +14,20 @@ initial_y=3
 segment_length=3
 recursion_lvl=3
 
-tput clear # Clear the terminal
-tput civis # Hide cursor
+declare -A char_map
+# This maps angles to characters
+char_map["0,0"]="━"
+char_map["0,90"]="┓"
+char_map["0,-90"]="┛"
+char_map["90,0"]="┃"
+char_map["90,90"]="┛"
+char_map["90,-90"]="┗"
+char_map["180,0"]="━"
+char_map["180,90"]="┗"
+char_map["180,-90"]="┏"
+char_map["270,0"]="┃"
+char_map["270,90"]="┏"
+char_map["270,-90"]="┓"
 
 # Function that expands the axiom string based on the rules
 expand(){
@@ -50,6 +62,7 @@ draw(){
       -) 
         (( delta_angle -= 90 ));;
       F)
+        print_corner
         (( angle += delta_angle ))
         if (( angle < 0 )); then
           (( angle += 360 ))
@@ -62,6 +75,13 @@ draw(){
   done
 }
 
+# Function that prints corner characters
+print_corner(){
+  read -t 0.05 -n 1 2>/dev/null
+  char=${char_map["$angle,$delta_angle"]}
+  printf "\e[%d;%dH\e[36m%s" $y $x $char
+}
+
 # Function that prints one segment
 print_segment(){
   read -t 0.05 -n 1 2>/dev/null
@@ -72,7 +92,7 @@ print_segment(){
         (( x ++ ))
         printf "\e[%d;%dH\e[36m%s" $y $x "━"
       done;;
-    90) 
+    90)
       for ((i = 0; i < segment_length-1; i++)); do
         (( y ++ ))
         printf "\e[%d;%dH\e[36m%s" $y $x "┃"
@@ -88,8 +108,10 @@ print_segment(){
         printf "\e[%d;%dH\e[36m%s" $y $x "┃"
       done;;
   esac
-
 }
+
+tput clear # Clear the terminal
+tput civis # Hide cursor
 
 # Expand the axiom
 i=0
