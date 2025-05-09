@@ -12,7 +12,7 @@ initial_angle=0
 initial_x=45
 initial_y=3
 segment_length=3
-recursion_lvl=3
+order=3
 
 declare -A char_map
 # This maps angles to characters
@@ -79,7 +79,7 @@ draw(){
 print_corner(){
   read -t 0.05 -n 1 2>/dev/null
   char=${char_map["$angle,$delta_angle"]}
-  printf "\e[%d;%dH\e[36m%s" $y $x $char
+  print_char $x $y $char cyan
 }
 
 # Function that prints one segment
@@ -90,24 +90,44 @@ print_segment(){
     0)
       for ((i = 0; i < 2*(segment_length-1); i++)); do
         (( x ++ ))
-        printf "\e[%d;%dH\e[36m%s" $y $x "━"
+        print_char $x $y "━" cyan
       done;;
     90)
       for ((i = 0; i < segment_length-1; i++)); do
         (( y ++ ))
-        printf "\e[%d;%dH\e[36m%s" $y $x "┃"
+        print_char $x $y "┃" cyan
       done;;
     180)
       for ((i = 0; i < 2*(segment_length-1); i++)); do
         (( x -- ))
-        printf "\e[%d;%dH\e[36m%s" $y $x "━"
+        print_char $x $y "━" cyan
       done;;
     270)
       for ((i = 0; i < segment_length-1; i++)); do
         (( y -- ))
-        printf "\e[%d;%dH\e[36m%s" $y $x "┃"
+        print_char $x $y "┃" cyan
       done;;
   esac
+}
+
+# Function that prints a character with a certain color in the given position
+print_char(){
+  local x=$1
+  local y=$2
+  local char=$3
+  local color=$4
+  
+  case $color in
+    black) esc_code="\e[30m";;
+    red) esc_code="\e[31m";;
+    green) esc_code="\e[32m";;
+    yellow) esc_code="\e[33m";;
+    blue) esc_code="\e[34m";;
+    magenta) esc_code="\e[35m";;
+    cyan) esc_code="\e[36m";;
+    *) esc_code="\e[37m";;
+  esac
+  printf "\e[%d;%dH%b%s" $y $x $esc_code $char
 }
 
 tput clear # Clear the terminal
@@ -115,7 +135,7 @@ tput civis # Hide cursor
 
 # Expand the axiom
 i=0
-for ((i = 0; i <= recursion_lvl; i++)); do
+for ((i = 0; i <= order; i++)); do
   expand
 done
 
