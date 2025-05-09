@@ -135,7 +135,6 @@ draw(){
 
 # Function that prints corner characters
 print_corner(){
-  read -t 0.05 -n 1 2>/dev/null
   if [ $first_char = true ]; then
     char=${char_map[",$angle"]}
   else
@@ -147,7 +146,6 @@ print_corner(){
 
 # Function that prints an edge
 print_edge(){
-  read -t 0.05 -n 1 2>/dev/null
   local i
   case $angle in
     0)
@@ -194,12 +192,12 @@ print_char(){
     cyan) esc_code="\e[36m";;
     *) esc_code="\e[37m";;
   esac
+  read -t 0.05 -n 1 2>/dev/null # Pause for a while
   printf "\e[%d;%dH%b%s\e[0m" $y $x $esc_code $char
 }
 
 # Funtion that prints the last character.
 print_last_char(){
-  read -t 0.05 -n 1 2>/dev/null
   char=${char_map["$initial_angle,"]}
   print_char $x $y $char cyan
 }
