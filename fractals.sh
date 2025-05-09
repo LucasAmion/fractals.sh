@@ -66,6 +66,14 @@ char_map["180,270"]="┗"
 char_map["270,0"]="┏"
 char_map["270,180"]="┓"
 char_map["270,270"]="┃"
+char_map[",0"]="╺"
+char_map[",90"]="╻"
+char_map[",180"]="╸"
+char_map[",270"]="╹"
+char_map["0,"]="╸"
+char_map["90,"]="╹"
+char_map["180,"]="╺"
+char_map["270,"]="╻"
 
 # Function that expands the axiom string based on the rules
 expand(){
@@ -92,6 +100,7 @@ draw(){
   x=$initial_x
   y=$initial_y
   angle=$initial_angle
+  first_char=true
   local i
   for ((i = 0; i < ${#axiom}; i++)); do
     case "${axiom:i:1}" in
@@ -110,13 +119,19 @@ draw(){
         print_edge;;
     esac
   done
+  print_last_char
 }
 
 # Function that prints corner characters
 print_corner(){
   read -t 0.05 -n 1 2>/dev/null
-  char=${char_map["$initial_angle,$angle"]}
+  if [ $first_char = true ]; then
+    char=${char_map[",$angle"]}
+  else
+    char=${char_map["$initial_angle,$angle"]}
+  fi
   print_char $x $y $char cyan
+  first_char=false
 }
 
 # Function that prints an edge
@@ -169,6 +184,13 @@ print_char(){
     *) esc_code="\e[37m";;
   esac
   printf "\e[%d;%dH%b%s" $y $x $esc_code $char
+}
+
+# Funtion that prints the last character.
+print_last_char(){
+  read -t 0.05 -n 1 2>/dev/null
+  char=${char_map["$initial_angle,"]}
+  print_char $x $y $char cyan
 }
 
 tput clear # Clear the terminal
