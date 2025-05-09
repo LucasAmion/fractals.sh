@@ -183,7 +183,7 @@ print_char(){
     cyan) esc_code="\e[36m";;
     *) esc_code="\e[37m";;
   esac
-  printf "\e[%d;%dH%b%s" $y $x $esc_code $char
+  printf "\e[%d;%dH%b%s\e[0m" $y $x $esc_code $char
 }
 
 # Funtion that prints the last character.
