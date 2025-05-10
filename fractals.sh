@@ -143,15 +143,16 @@ draw(){
   for ((i = 0; i < ${#axiom}; i++)); do
     case "${axiom:i:1}" in
       +) 
-        (( angle += 90 ));;
+        (( angle += 90 ))
+        if (( angle >= 360)); then
+          (( angle -= 360 ))
+        fi ;;
       -) 
-        (( angle -= 90 ));;
-      F)
+        (( angle -= 90 ))
         if (( angle < 0 )); then
           (( angle += 360 ))
-        elif (( angle >= 360)); then
-          (( angle -= 360 ))
-        fi
+        fi ;;
+      F)
         print_corner
         initial_angle=$angle
         print_edge;;
