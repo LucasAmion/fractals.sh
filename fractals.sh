@@ -3,18 +3,21 @@
 order=$1
 
 # Definition of the L-System for the Hilbert Curve
-axiom="A"
-A="+BF-AFA-FB+"
-B="-AF+BFB+FA-"
-C=""
-D=""
-E=""
-F=""
-G=""
+# axiom="A"
+# A="+BF-AFA-FB+"
+# B="-AF+BFB+FA-"
+# initial_angle=0
+# initial_x="0.0" # Must be a number between 0 and 1 because it's relative to the size of the fractal. It has to be a string because bash does not support floating point numbers for some reason.
+# initial_y="0.0"
+# scale=(1 3 7 15 31 63 127 255) # How much the size of the segment scales down when increasing the order. Can be an array or a number
+
+# Definition of the L-System for the Lévy C Curve
+axiom="F"
+F="+F-FF-F+"
 initial_angle=0
 initial_x="0.0" # Must be a number between 0 and 1 because it's relative to the size of the fractal. It has to be a string because bash does not support floating point numbers for some reason.
-initial_y="0.0"
-scale=(1 3 7 15 31 63 127 255) # How much the size of the segment scales down when increasing the order. Can be an array or a number
+initial_y="0.2"
+scale=(1 3 8 18 39 81 166 336) # How much the size of the segment scales down when increasing the order. Can be an array or a number
 
 # This function is used for checking if scale is an array
 is_array() {
@@ -67,14 +70,18 @@ declare -A char_map
 # This maps angles to characters
 char_map["0,0"]="━"
 char_map["0,90"]="┓"
+char_map["0,180"]="╸"
 char_map["0,270"]="┛"
 char_map["90,0"]="┗"
 char_map["90,90"]="┃"
 char_map["90,180"]="┛"
+char_map["90,270"]="╹"
+char_map["180,0"]="╺"
 char_map["180,90"]="┏"
 char_map["180,180"]="━"
 char_map["180,270"]="┗"
 char_map["270,0"]="┏"
+char_map["270,90"]="╻"
 char_map["270,180"]="┓"
 char_map["270,270"]="┃"
 char_map[",0"]="╺"
@@ -100,6 +107,26 @@ expand(){
         axiom=${axiom:0:i}${axiom:i+1}
         axiom=${axiom:0:i}${B}${axiom:i}
         (( i += ${#B} )) ;;
+      C)
+        axiom=${axiom:0:i}${axiom:i+1}
+        axiom=${axiom:0:i}${C}${axiom:i}
+        (( i += ${#C} )) ;;
+      D)
+        axiom=${axiom:0:i}${axiom:i+1}
+        axiom=${axiom:0:i}${D}${axiom:i}
+        (( i += ${#D} )) ;;
+      E)
+        axiom=${axiom:0:i}${axiom:i+1}
+        axiom=${axiom:0:i}${E}${axiom:i}
+        (( i += ${#E} )) ;;
+      F)
+        axiom=${axiom:0:i}${axiom:i+1}
+        axiom=${axiom:0:i}${F}${axiom:i}
+        (( i += ${#F} )) ;;
+      G)
+        axiom=${axiom:0:i}${axiom:i+1}
+        axiom=${axiom:0:i}${G}${axiom:i}
+        (( i += ${#G} )) ;;
       *)
         (( i ++ )) ;;
     esac
