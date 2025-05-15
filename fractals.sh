@@ -1,24 +1,49 @@
 #!/usr/bin/env bash
-# Obtain input parameters
-order=$1
+# Parse command-line options
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -o|--order)
+      order="$2"
+      shift 2
+      ;;
+    -*)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+    *) # First non-option = positional argument
+      fractal_name="$1"
+      shift
+      break
+      ;;
+  esac
+done
 
-# Definition of the L-System for the Hilbert Curve
-# axiom="A"
-# A="+BF-AFA-FB+"
-# B="-AF+BFB+FA-"
-# initial_angle=0
-# initial_x="0.0" # Must be a number between 0 and 1 because it's relative to the size of the fractal. It has to be a string because bash does not support floating point numbers for some reason.
-# initial_y="0.0"
-# scale=(1 3 7 15 31 63 127 255) # How much the size of the segment scales down when increasing the order. Can be an array or a number
+# Set default values
+order=${order:-99} # If order is not defined the max value for the terminal size will be used
+fractal_name=${fractal_name:-hilbert}
 
-# Definition of the L-System for the Lévy C Curve
-axiom="F"
-F="+F-FF-F+"
-initial_angle=0
-initial_y=(0 0 0 1 3 7 15 31 63 127)
-initial_x=(0 0 1 3 7 15 31 63 127 255)
-scale_x=(1 2 6 14 30 62 126 254)
-scale_y=(1 1 3 8 18 38 78 158 318)
+# Set L-system related variables based on the fractal name
+case $fractal_name in
+  hilbert)
+    axiom="A"
+    A="+BF-AFA-FB+"
+    B="-AF+BFB+FA-"
+    initial_angle=0
+    initial_x="0.0"
+    initial_y="0.0"
+    scale=(1 3 7 15 31 63 127 255);;
+  levy)
+    axiom="F"
+    F="+F-FF-F+"
+    initial_angle=0
+    initial_y=(0 0 0 1 3 7 15 31 63 127)
+    initial_x=(0 0 1 3 7 15 31 63 127 255)
+    scale_x=(1 2 6 14 30 62 126 254)
+    scale_y=(1 1 3 8 18 38 78 158 318);;
+  *) 
+    echo "Unknown fractal name: $fractal_name"
+    exit 1;;
+esac
 
 # This function is used for checking if scale is an array
 is_array() {
