@@ -15,60 +15,89 @@ order=$1
 axiom="F"
 F="+F-FF-F+"
 initial_angle=0
-initial_x="0.0" # Must be a number between 0 and 1 because it's relative to the size of the fractal. It has to be a string because bash does not support floating point numbers for some reason.
-initial_y="0.2"
-scale=(1 3 8 18 39 81 166 336) # How much the size of the segment scales down when increasing the order. Can be an array or a number
+initial_y=(0 0 0 1 3 7 15 31 63 127)
+initial_x=(0 0 1 3 7 15 31 63 127 255)
+scale_x=(1 2 6 14 30 62 126 254)
+scale_y=(1 1 3 8 18 38 78 158 318)
 
 # This function is used for checking if scale is an array
 is_array() {
   declare -p "$1" 2>/dev/null | grep -q 'declare \-a'
 }
 
-# Skip order 0 if there is nothing to print
-number_of_Fs=0
-for (( i=0; i < ${#axiom}; i++ )); do
-  if [ ${axiom:i:1} = "F" ]; then
-    (( number_of_Fs ++ ))
+# If scale is defined it replaces the values for scale_x and scale_y
+if [[ -n $scale ]]; then
+  if $(is_array scale); then
+    scale_x=("${scale[@]}")
+    scale_y=("${scale[@]}")
+  else
+    scale_x=$scale
+    scale_y=$scale
   fi
-done
-if [ $number_of_Fs = 0 ]; then
-  (( order ++ ))
 fi
 
 # Calculate size of terminal
-width=$(($(tput cols) - 1 ))
-height=$(($(tput lines) - 1 ))
+max_width=$(($(tput cols) - 1 ))
+max_height=$(($(tput lines) - 1 ))
 
-# Calculate max size of fractal based on size of terminal (width is diveded by 2 because usually line_height=2*character_width in terminals)
-max_size=$(( width/2 < height ? width/2 : height ))
-
-# Calculate segment length and order based on max size
+# Calculate segment length and order based on terminal size
 count=0
-segment_length=$max_size
-while (( count < order )); do
-  if $( is_array scale ); then
-    (( new_segment_length = $max_size / ${scale[$count]} ))
+len_y=$max_height
+len_x=$max_width/2
+while (( count <= order )); do
+  if $( is_array scale_y ); then
+    (( new_len_y = $max_height / ${scale_y[$count]} ))
   else
-    (( new_segment_length = segment_lenth / $scale ))
-fi
-  if (( new_segment_length < 1 )); then
+    (( new_len_y = $len_y / $scale_y ))
+  fi
+
+  if (( new_len_y < 1 )); then
     break
   fi
-(( segment_length = new_segment_length ))
+
+  if $( is_array scale_x ); then
+    (( new_len_x = $max_width/2 / ${scale_x[$count]} ))
+  else
+    (( new_len_x = $len_x / $scale_x ))
+  fi
+
+  if (( new_len_x < 1 )); then
+    break
+  fi
+
+  (( len_y = new_len_y ))
+  (( len_x = new_len_x ))
+
   (( count ++ ))
 done
-order=$count
+(( segment_length = len_x < len_y ? len_x : len_y ))
+(( order = $count - 1 ))
 
 # Calculate size of fractal based on segment length
-if $( is_array scale ); then
-  size=$(( ${scale[$order - 1]} * $segment_length))
+if $( is_array scale_x ); then
+  width=$(( ${scale_x[$order]} * $segment_length))
 else
-  size=$(( $scale ** $order * $segment_length))
+  width=$(( $scale_x ** $order * $segment_length))
+fi
+
+if $( is_array scale_y ); then
+  height=$(( ${scale_y[$order]} * $segment_length))
+else
+  height=$(( $scale_y ** $order * $segment_length))
 fi
 
 # Calculate initial position based on size of fractal. Have to use awk here because again bash does not support floating point arithmatic
-initial_x=$(( ($width - $size * 2) / 2 + $(awk "BEGIN { print int($initial_x * $size) }") + 1 ))
-initial_y=$(( ($height - $size) / 2 + $(awk "BEGIN { print int($initial_y * $size) }") + 1 ))
+if $( is_array initial_x ); then
+  initial_x=$(( ($max_width - $width * 2) / 2 + ${initial_x[$order]} * $segment_length * 2 + 1 ))
+else
+  initial_x=$(( ($max_width - $width * 2) / 2 + $(awk "BEGIN { print int($initial_x * $width) }") * 2 + 1 ))
+fi
+
+if $( is_array initial_y ); then
+  initial_y=$(( ($max_height - $height) / 2 + ${initial_y[$order]} * $segment_length + 1 ))
+else
+  initial_y=$(( ($max_height - $height) / 2 + $(awk "BEGIN { print int($initial_y * $height) }") * 2 + 1 ))
+fi
 
 declare -A char_map
 # This maps angles to characters
@@ -124,18 +153,18 @@ expand(){
         axiom=${axiom:0:i}${E}${axiom:i}
         (( i += ${#E} )) ;;
       F)
-if [ $F ]; then
-        axiom=${axiom:0:i}${axiom:i+1}
-        axiom=${axiom:0:i}${F}${axiom:i}
-        (( i += ${#F} ))
+        if [ $F ]; then
+          axiom=${axiom:0:i}${axiom:i+1}
+          axiom=${axiom:0:i}${F}${axiom:i}
+          (( i += ${#F} ))
         else
           (( i ++ )) 
         fi ;;
       G)
-if [ $G ]; then
-        axiom=${axiom:0:i}${axiom:i+1}
-        axiom=${axiom:0:i}${G}${axiom:i}
-        (( i += ${#G} ))
+        if [ $G ]; then
+          axiom=${axiom:0:i}${axiom:i+1}
+          axiom=${axiom:0:i}${G}${axiom:i}
+          (( i += ${#G} ))
         else
           (( i ++ )) 
         fi ;;
@@ -245,6 +274,18 @@ print_last_char(){
 
 tput clear # Clear the terminal
 tput civis # Hide cursor
+
+# Skip order 0 if there is nothing to print
+number_of_Fs=0
+for (( i=0; i < ${#axiom}; i++ )); do
+  if [ ${axiom:i:1} = "F" ]; then
+    (( number_of_Fs ++ ))
+    break
+  fi
+done
+if [ $number_of_Fs = 0 ]; then
+  (( order ++ ))
+fi
 
 # Expand the axiom
 i=0
