@@ -124,13 +124,21 @@ expand(){
         axiom=${axiom:0:i}${E}${axiom:i}
         (( i += ${#E} )) ;;
       F)
+if [ $F ]; then
         axiom=${axiom:0:i}${axiom:i+1}
         axiom=${axiom:0:i}${F}${axiom:i}
-        (( i += ${#F} )) ;;
+        (( i += ${#F} ))
+        else
+          (( i ++ )) 
+        fi ;;
       G)
+if [ $G ]; then
         axiom=${axiom:0:i}${axiom:i+1}
         axiom=${axiom:0:i}${G}${axiom:i}
-        (( i += ${#G} )) ;;
+        (( i += ${#G} ))
+        else
+          (( i ++ )) 
+        fi ;;
       *)
         (( i ++ )) ;;
     esac
