@@ -45,12 +45,16 @@ max_size=$(( width/2 < height ? width/2 : height ))
 # Calculate segment length and order based on max size
 count=0
 segment_length=$max_size
-while (( segment_length >= 2 && count < order )); do
+while (( count < order )); do
   if $( is_array scale ); then
-    (( segment_length = $max_size / ${scale[$count]} ))
+    (( new_segment_length = $max_size / ${scale[$count]} ))
   else
-    (( segment_length /= $scale ))
+    (( new_segment_length = segment_lenth / $scale ))
+fi
+  if (( new_segment_length < 1 )); then
+    break
   fi
+(( segment_length = new_segment_length ))
   (( count ++ ))
 done
 order=$count
