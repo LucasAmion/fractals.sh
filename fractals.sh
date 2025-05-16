@@ -28,7 +28,18 @@ char_map["90,"]="╹"
 char_map["180,"]="╺"
 char_map["270,"]="╻"
 
-colors=(red green yellow blue magenta cyan default) # Available colors
+# Available colors
+colors=(default red green yellow blue magenta cyan)
+
+# Escape sequences associated with each color
+declare -A color_esc_codes
+color_esc_codes[red]="\e[31m"
+color_esc_codes[green]="\e[32m"
+color_esc_codes[yellow]="\e[33m"
+color_esc_codes[blue]="\e[34m"
+color_esc_codes[magenta]="\e[35m"
+color_esc_codes[cyan]="\e[36m"
+color_esc_codes[default]="\e[0m"
 
 # This variable holds the entire fractal drawn so far so it can be reprinted when the color changes
 full_string=""
@@ -158,8 +169,29 @@ print_edge(){
   esac
 }
 
+# Funtion that prints the last character.
+print_last_char(){
+  char=${char_map["$initial_angle,"]}
+  print_char
+}
+
 # Function that prints a character with a certain color in the given position
 print_char(){
+  # Handle keyboard input
+  handle_controls
+
+  # Get the escape code for the current color
+  esc_code="${color_esc_codes[$color]}"
+  
+  # Store the character in the full_string variable
+  full_string="${full_string}\e[${y};${x}H${char}"
+  
+  # Print the character at the specified position
+  printf "\e[%d;%dH%b%s" $y $x $esc_code $char
+}
+
+# Function that handles keyboard input. It is called every time a character is printed
+handle_controls(){
   read -s -t 0.05 -n 1 2>/dev/null # Pause for a while
   case "$REPLY" in
     c) 
@@ -170,25 +202,21 @@ print_char(){
           color="${colors[$next_idx]}"
           break
         fi
-      done;;
+      done
+      # Reprint the fractal with the new color
+      esc_code="${color_esc_codes[$color]}"
+      printf "$esc_code$full_string";;
+    q)
+      quit;;
   esac
-  case $color in
-    red) esc_code="\e[31m";;
-    green) esc_code="\e[32m";;
-    yellow) esc_code="\e[33m";;
-    blue) esc_code="\e[34m";;
-    magenta) esc_code="\e[35m";;
-    cyan) esc_code="\e[36m";;
-    *) esc_code="\e[0m";;
-  esac
-  full_string="${full_string}\e[${y};${x}H${char}"
-  printf "$esc_code$full_string"
 }
 
-# Funtion that prints the last character.
-print_last_char(){
-  char=${char_map["$initial_angle,"]}
-  print_char
+# Quit the program
+quit() {
+  tput clear # Clear terminal
+  tput cnorm # Restore cursor
+  stty echo # Restore echo
+  exit 0
 }
 
 ### INPUT ARGUMENTS ###
@@ -349,7 +377,6 @@ done
 # Draw the fractal
 draw
 
-read # Close on enter
-tput clear # Clear terminal
-tput cnorm # Restore cursor
-stty echo # Restore echo
+while true; do
+  handle_controls
+done
