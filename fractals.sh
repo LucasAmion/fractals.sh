@@ -306,6 +306,7 @@ fi
 ### MAIN EXECUTION ###
 tput clear # Clear the terminal
 tput civis # Hide cursor
+stty -echo # Prevent typed characters from being printed
 
 # Skip order 0 if there is nothing to print
 number_of_Fs=0
@@ -331,3 +332,4 @@ draw
 read # Close on enter
 tput clear # Clear terminal
 tput cnorm # Restore cursor
+stty echo # Restore echo
