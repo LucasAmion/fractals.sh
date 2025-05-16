@@ -19,10 +19,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Set default values
-order=${order:-99} # If order is not defined the max value for the terminal size will be used
+order=${order:-8} # If order is not defined the max value will be used
+(( order = order > 8 ? 8 : order )) # Order can't be higher than 8
 fractal_name=${fractal_name:-hilbert}
 
-# Set L-system related variables based on the fractal name
+# Set L-system related variables for each fractal name
 case $fractal_name in
   hilbert)
     axiom="A"
@@ -31,14 +32,14 @@ case $fractal_name in
     initial_angle=0
     initial_x="0.0"
     initial_y="0.0"
-    scale=(1 3 7 15 31 63 127 255);;
+    scale=(1 3 7 15 31 63 127 255 511);;
   levy)
     axiom="F"
     F="+F-FF-F+"
     initial_angle=0
-    initial_y=(0 0 0 1 3 7 15 31 63 127)
-    initial_x=(0 0 1 3 7 15 31 63 127 255)
-    scale_x=(1 2 6 14 30 62 126 254)
+    initial_y=(0 0 0 1 3 7 15 31 63)
+    initial_x=(0 0 1 3 7 15 31 63 127)
+    scale_x=(1 2 6 14 30 62 126 254 510)
     scale_y=(1 1 3 8 18 38 78 158 318);;
   *) 
     echo "Unknown fractal name: $fractal_name"
