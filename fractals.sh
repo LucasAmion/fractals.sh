@@ -28,6 +28,11 @@ char_map["90,"]="╹"
 char_map["180,"]="╺"
 char_map["270,"]="╻"
 
+colors=(red green yellow blue magenta cyan default) # Available colors
+
+# This variable holds the entire fractal drawn so far so it can be reprinted when the color changes
+full_string=""
+
 ### FUNCTION DEFINITIONS ###
 # Function that checks if a variable is an array
 is_array() {
@@ -117,7 +122,7 @@ print_corner(){
   else
     char=${char_map["$initial_angle,$angle"]}
   fi
-  print_char $x $y $char cyan
+  print_char
   first_char=false
 }
 
@@ -129,25 +134,25 @@ print_edge(){
     0)
       (( x ++ ))
       for ((i = 0; i < 2*segment_length-1; i++)); do
-        print_char $x $y $char cyan
+        print_char
         (( x ++ ))
       done;;
     90)
       (( y ++ ))
       for ((i = 0; i < segment_length-1; i++)); do
-        print_char $x $y $char cyan
+        print_char
         (( y ++ ))
       done;;
     180)
       (( x -- ))
       for ((i = 0; i < 2*segment_length-1; i++)); do
-        print_char $x $y $char cyan
+        print_char
         (( x -- ))
       done;;
     270)
       (( y -- ))
       for ((i = 0; i < segment_length-1; i++)); do
-        print_char $x $y $char cyan
+        print_char
         (( y -- ))
       done;;
   esac
@@ -155,37 +160,51 @@ print_edge(){
 
 # Function that prints a character with a certain color in the given position
 print_char(){
-  local x=$1
-  local y=$2
-  local char=$3
-  local color=$4
-  
+  read -s -t 0.05 -n 1 2>/dev/null # Pause for a while
+  case "$REPLY" in
+    c) 
+      # Cycle to the next color in the colors array
+      for idx in "${!colors[@]}"; do
+        if [[ "${colors[$idx]}" == "$color" ]]; then
+          next_idx=$(( (idx + 1) % ${#colors[@]} ))
+          color="${colors[$next_idx]}"
+          break
+        fi
+      done;;
+  esac
   case $color in
-    black) esc_code="\e[30m";;
     red) esc_code="\e[31m";;
     green) esc_code="\e[32m";;
     yellow) esc_code="\e[33m";;
     blue) esc_code="\e[34m";;
     magenta) esc_code="\e[35m";;
     cyan) esc_code="\e[36m";;
-    *) esc_code="\e[37m";;
+    *) esc_code="\e[0m";;
   esac
-  read -t 0.05 -n 1 2>/dev/null # Pause for a while
-  printf "\e[%d;%dH%b%s\e[0m" $y $x $esc_code $char
+  full_string="${full_string}\e[${y};${x}H${char}"
+  printf "$esc_code$full_string"
 }
 
 # Funtion that prints the last character.
 print_last_char(){
   char=${char_map["$initial_angle,"]}
-  print_char $x $y $char cyan
+  print_char
 }
 
 ### INPUT ARGUMENTS ###
-# Parse command line options
+# Parse command-line options
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -o|--order)
       order="$2"
+      shift 2
+      ;;
+    -c|--color)
+      if [[ ! " ${colors[@]} " =~ " $2 " ]]; then
+        echo "Invalid color: $2. Available colors: ${colors[*]}"
+        exit 1
+      fi
+      color="$2"
       shift 2
       ;;
     -*)
@@ -201,6 +220,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Set default values
+color=${color:-default}
 order=${order:-8} # If order is not defined the max value will be used
 (( order = order > 8 ? 8 : order )) # Order can't be higher than 8
 fractal_name=${fractal_name:-hilbert}
