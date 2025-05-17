@@ -1,32 +1,10 @@
 #!/usr/bin/env bash
 
 ### GLOBAL VARIBLES ###
-# This maps angles to characters
-declare -A char_map
-char_map["0,0"]="━"
-char_map["0,90"]="┓"
-char_map["0,180"]="╸"
-char_map["0,270"]="┛"
-char_map["90,0"]="┗"
-char_map["90,90"]="┃"
-char_map["90,180"]="┛"
-char_map["90,270"]="╹"
-char_map["180,0"]="╺"
-char_map["180,90"]="┏"
-char_map["180,180"]="━"
-char_map["180,270"]="┗"
-char_map["270,0"]="┏"
-char_map["270,90"]="╻"
-char_map["270,180"]="┓"
-char_map["270,270"]="┃"
-char_map[",0"]="╺"
-char_map[",90"]="╻"
-char_map[",180"]="╸"
-char_map[",270"]="╹"
-char_map["0,"]="╸"
-char_map["90,"]="╹"
-char_map["180,"]="╺"
-char_map["270,"]="╻"
+# The characters to draw with. They are encoded in binary so they can be combined easily, one bit per possible direction:
+# 0001 = 1 -> "╺" (left), 0010 = 2 -> "╻" (down), 0100 = 4 -> "╸" (right), 1000 = 8 -> "╹" (up)
+# The rest of the characters are sums of these
+chars=(" " "╺" "╻" "┏" "╸" "━" "┓" "┳" "╹" "┗" "┃" "┣" "┛" "┻" "┫" "╋")
 
 # Available colors
 colors=(default red green yellow blue magenta cyan)
@@ -98,69 +76,75 @@ expand(){
   done
 }
 
+# Function that rotates the character 90 degrees clockwise or counterclockwise
+# Since the chracters are encoded in binary, this is achieved by multiplying or dividing by 2
+rotate_char(){
+  local result
+  case $1 in
+    +) 
+      (( result = $2 * 2 ))
+      (( result = result > 8 ? 1 : result ));;
+    -)
+      (( result = $2 / 2 ))
+      (( result = result < 1 ? 8 : result ));;
+  esac
+  echo $result
+}
+
+# Function that sums two characters 
+# Since the chracters are encoded in binary, this is achieved by using the bitwise OR operator
+sum_chars(){
+  echo $(($1 | $2))
+}
+
 # Function that draws the fractal based on the expanded axiom string
 draw(){
   x=$initial_x
   y=$initial_y
-  angle=$initial_angle
-  first_char=true
+  in_char=0
+  out_char=$(( 2 ** ( $initial_angle / 90) ))
   local i
   for ((i = 0; i < ${#axiom}; i++)); do
     case "${axiom:i:1}" in
-      +) 
-        (( angle += 90 ))
-        if (( angle >= 360)); then
-          (( angle -= 360 ))
-        fi ;;
-      -) 
-        (( angle -= 90 ))
-        if (( angle < 0 )); then
-          (( angle += 360 ))
-        fi ;;
+      +)
+        out_char=$(rotate_char '+' $out_char)
+        ;;
+      -)
+        out_char=$(rotate_char '-' $out_char)
+        ;;
       F)
-        print_corner
-        initial_angle=$angle
-        print_edge;;
+        print_edge
     esac
   done
-  print_last_char
-}
-
-# Function that prints corner characters
-print_corner(){
-  if [ $first_char = true ]; then
-    char=${char_map[",$angle"]}
-  else
-    char=${char_map["$initial_angle,$angle"]}
-  fi
+  out_char=0
   print_char
-  first_char=false
 }
 
 # Function that prints an edge
 print_edge(){
-  char=${char_map["$initial_angle,$angle"]}
+  print_char
+  in_char=$(rotate_char '+' $(rotate_char '+' $out_char))
   local i
-  case $angle in
-    0)
+  case $out_char in
+    1)
       (( x ++ ))
       for ((i = 0; i < 2*segment_length-1; i++)); do
         print_char
         (( x ++ ))
       done;;
-    90)
+    2)
       (( y ++ ))
       for ((i = 0; i < segment_length-1; i++)); do
         print_char
         (( y ++ ))
       done;;
-    180)
+    4)
       (( x -- ))
       for ((i = 0; i < 2*segment_length-1; i++)); do
         print_char
         (( x -- ))
       done;;
-    270)
+    8)
       (( y -- ))
       for ((i = 0; i < segment_length-1; i++)); do
         print_char
@@ -169,16 +153,14 @@ print_edge(){
   esac
 }
 
-# Funtion that prints the last character.
-print_last_char(){
-  char=${char_map["$initial_angle,"]}
-  print_char
-}
-
 # Function that prints a character with a certain color in the given position
 print_char(){
   # Handle keyboard input
   handle_controls
+
+  # Get the current character to print
+  # Each character is considered to be a combination of an "in character" and an "out charracter"
+  char=${chars[$(sum_chars $in_char $out_char)]}
 
   # Get the escape code for the current color
   esc_code="${color_esc_codes[$color]}"
