@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034
 
 ### GLOBAL VARIBLES ###
 # The characters to draw with. They are encoded in binary so they can be combined easily, one bit per possible direction:
@@ -30,50 +31,22 @@ is_array() {
 
 # Function that expands the axiom string based on the rules
 expand(){
-  local i=0
-  while (( i < ${#axiom} )); do
+  local i char replacement
+  local expanded=""
+  for (( i=0; i < ${#axiom}; i++ )); do
     char=${axiom:i:1}
     case $char in
-      A) 
-        axiom=${axiom:0:i}${axiom:i+1}
-        axiom=${axiom:0:i}${A}${axiom:i}
-        (( i += ${#A} )) ;;
-      B) 
-        axiom=${axiom:0:i}${axiom:i+1}
-        axiom=${axiom:0:i}${B}${axiom:i}
-        (( i += ${#B} )) ;;
-      C)
-        axiom=${axiom:0:i}${axiom:i+1}
-        axiom=${axiom:0:i}${C}${axiom:i}
-        (( i += ${#C} )) ;;
-      D)
-        axiom=${axiom:0:i}${axiom:i+1}
-        axiom=${axiom:0:i}${D}${axiom:i}
-        (( i += ${#D} )) ;;
-      E)
-        axiom=${axiom:0:i}${axiom:i+1}
-        axiom=${axiom:0:i}${E}${axiom:i}
-        (( i += ${#E} )) ;;
-      F)
-        if [ $F ]; then
-          axiom=${axiom:0:i}${axiom:i+1}
-          axiom=${axiom:0:i}${F}${axiom:i}
-          (( i += ${#F} ))
-        else
-          (( i ++ )) 
-        fi ;;
-      G)
-        if [ $G ]; then
-          axiom=${axiom:0:i}${axiom:i+1}
-          axiom=${axiom:0:i}${G}${axiom:i}
-          (( i += ${#G} ))
-        else
-          (( i ++ )) 
-        fi ;;
+      A|B|C|D|E)
+        replacement=${!char}
+        expanded+=${replacement} ;;
+      F|G)
+        replacement=${!char}
+        expanded+=${replacement:-$char} ;;
       *)
-        (( i ++ )) ;;
+        expanded+=${char} ;;
     esac
   done
+  axiom=$expanded
 }
 
 # Function that rotates the character 90 degrees clockwise or counterclockwise
