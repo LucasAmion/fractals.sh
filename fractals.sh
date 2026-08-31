@@ -20,6 +20,9 @@ color_esc_codes[magenta]="\e[35m"
 color_esc_codes[cyan]="\e[36m"
 color_esc_codes[default]="\e[0m"
 
+# Matrix that stores the code of the character currently printed at each x,y location. Needed so characters can be "summed up" when writing over them.
+declare -A screen_chars
+
 # This variable holds the entire fractal drawn so far so it can be reprinted when the color changes
 full_string=""
 
@@ -62,12 +65,6 @@ rotate_char(){
       (( result = result < 1 ? 8 : result ));;
   esac
   echo $result
-}
-
-# Function that sums two characters 
-# Since the chracters are encoded in binary, this is achieved by using the bitwise OR operator
-sum_chars(){
-  echo $(($1 | $2))
 }
 
 # Function that draws the fractal based on the expanded axiom string
@@ -131,9 +128,17 @@ print_char(){
   # Handle keyboard input
   handle_controls
 
-  # Get the current character to print
-  # Each character is considered to be a combination of an "in character" and an "out charracter"
-  char=${chars[$(sum_chars $in_char $out_char)]}
+  # Get the character currently at the given screen position
+  position="$x,$y"
+  current_char=${screen_chars[$position]:-0}
+
+  # Get the character to print by adding up the "in character", the "out character" and the current character.
+  # Since the characters are encoded in binary, this is achieved by using the bitwise OR operator
+  char_code=$(( $in_char | $out_char | $current_char ))
+  char=${chars[$char_code]}
+
+  # Record the new char code in the screen matrix
+  screen_chars[$position]=$char_code
 
   # Get the escape code for the current color
   esc_code="${color_esc_codes[$color]}"
