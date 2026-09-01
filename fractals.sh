@@ -10,6 +10,9 @@ chars=(" " "╺" "╻" "┏" "╸" "━" "┓" "┳" "╹" "┗" "┃" "┣" "�
 # Available colors
 colors=(default red green yellow blue magenta cyan)
 
+# Predefined frame rates
+frame_rates=(5 10 20 40 80)
+
 # Escape sequences associated with each color
 declare -A color_esc_codes
 color_esc_codes[red]="\e[31m"
@@ -152,7 +155,7 @@ print_char(){
 
 # Function that handles keyboard input. It is called every time a character is printed
 handle_controls(){
-  read -s -t 0.05 -n 1 2>/dev/null # Pause for a while
+  read -s -t "$frame_delay" -n 1 2>/dev/null # Read input and pause according to frame rate
   case "$REPLY" in
     c) 
       # Cycle to the next color in the colors array
@@ -166,6 +169,17 @@ handle_controls(){
       # Reprint the fractal with the new color
       esc_code="${color_esc_codes[$color]}"
       printf "$esc_code$full_string";;
+    f)
+      # Cycle between predefined frame rates
+      next_frame_rate=${frame_rates[0]}
+      for rate in "${frame_rates[@]}"; do
+        if (( rate > frame_rate )); then
+          next_frame_rate=$rate
+          break
+        fi
+      done
+      frame_rate=$next_frame_rate
+      frame_delay=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }');;
     q)
       quit;;
   esac
@@ -195,6 +209,10 @@ while [[ $# -gt 0 ]]; do
       color="$2"
       shift 2
       ;;
+    -f|--frame-rate)
+      frame_rate="$2"
+      shift 2
+      ;;
     -*)
       echo "Unknown option: $1"
       exit 1
@@ -211,6 +229,12 @@ done
 color=${color:-default}
 order=${order:-8} # If order is not defined the max value will be used
 (( order = order > 8 ? 8 : order )) # Order can't be higher than 8
+frame_rate=${frame_rate:-20}
+if [[ ! $frame_rate =~ ^[1-9][0-9]*$ ]]; then
+  echo "Invalid frame rate: $frame_rate. Frame rate must be a positive integer."
+  exit 1
+fi
+frame_delay=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }')
 fractal_name=${fractal_name:-hilbert}
 
 # Set L-system related variables for each fractal name
