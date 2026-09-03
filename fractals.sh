@@ -284,7 +284,7 @@ while (( count <= order )); do
   if $( is_array scale_y ); then
     (( new_len_y = $max_height / ${scale_y[$count]} ))
   else
-    (( new_len_y = $len_y / $scale_y ))
+    (( new_len_y = $max_height / $scale_y ** $count ))
   fi
 
   if (( new_len_y < 1 )); then
@@ -294,7 +294,7 @@ while (( count <= order )); do
   if $( is_array scale_x ); then
     (( new_len_x = $max_width/2 / ${scale_x[$count]} ))
   else
-    (( new_len_x = $len_x / $scale_x ))
+    (( new_len_x = $max_width/2 / $scale_x ** $count ))
   fi
 
   if (( new_len_x < 1 )); then
@@ -332,7 +332,7 @@ fi
 if $( is_array initial_y ); then
   initial_y=$(( ($max_height - $height) / 2 + ${initial_y[$order]} * $segment_length + 1 ))
 else
-  initial_y=$(( ($max_height - $height) / 2 + $(awk "BEGIN { print int($initial_y * $height) }") * 2 + 1 ))
+  initial_y=$(( ($max_height - $height) / 2 + $(awk "BEGIN { print int($initial_y * $height) }") + 1 ))
 fi
 
 ### MAIN EXECUTION ###
