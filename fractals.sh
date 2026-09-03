@@ -86,41 +86,63 @@ draw(){
         out_char=$(rotate_char '-' $out_char)
         ;;
       F)
-        print_edge
+        forward true
+        ;;
+      G)
+        forward false
     esac
   done
   out_char=0
   print_char
 }
 
-# Function that prints an edge
-print_edge(){
-  print_char
-  in_char=$(rotate_char '+' $(rotate_char '+' $out_char))
+# Moves forward, optionally drawing
+forward(){
+  local draw_edge=$1 # whether to print an edge or only move
+
+  # Complete previous edge if necessary
+  if [[ $draw_edge == true ]]; then
+    print_char
+    in_char=$(rotate_char '+' "$(rotate_char '+' "$out_char")")
+  else
+    if (( in_char != 0 )); then
+      out_char=0 print_char
+    fi
+    in_char=0
+  fi
+
   local i
   case $out_char in
     1)
       (( x ++ ))
       for ((i = 0; i < 2*segment_length-1; i++)); do
-        print_char
+        if [[ $draw_edge == true ]]; then
+          print_char
+        fi
         (( x ++ ))
       done;;
     2)
       (( y ++ ))
       for ((i = 0; i < segment_length-1; i++)); do
-        print_char
+        if [[ $draw_edge == true ]]; then
+          print_char
+        fi
         (( y ++ ))
       done;;
     4)
       (( x -- ))
       for ((i = 0; i < 2*segment_length-1; i++)); do
-        print_char
+        if [[ $draw_edge == true ]]; then
+          print_char
+        fi
         (( x -- ))
       done;;
     8)
       (( y -- ))
       for ((i = 0; i < segment_length-1; i++)); do
-        print_char
+        if [[ $draw_edge == true ]]; then
+          print_char
+        fi
         (( y -- ))
       done;;
   esac
@@ -255,6 +277,14 @@ case $fractal_name in
     initial_x=(0 0 1 3 7 15 31 63 127)
     scale_x=(1 2 6 14 30 62 126 254 510)
     scale_y=(1 1 3 8 18 38 78 158 318);;
+  carpet)
+    axiom="F"
+    F="F-F+F+F+G-F-F-F+F"
+    G="GGG"
+    initial_angle=0
+    initial_x="0.0"
+    initial_y="0.5"
+    scale=3;;
   *) 
     echo "Unknown fractal name: $fractal_name"
     exit 1;;
