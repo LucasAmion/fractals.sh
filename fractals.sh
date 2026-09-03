@@ -5,7 +5,22 @@
 # The characters to draw with. They are encoded in binary so they can be combined easily, one bit per possible direction:
 # 0001 = 1 -> "╺" (left), 0010 = 2 -> "╻" (down), 0100 = 4 -> "╸" (right), 1000 = 8 -> "╹" (up)
 # The rest of the characters are sums of these
-chars=(" " "╺" "╻" "┏" "╸" "━" "┓" "┳" "╹" "┗" "┃" "┣" "┛" "┻" "┫" "╋")
+chars_90=(" " "╺" "╻" "┏" "╸" "━" "┓" "┳" "╹" "┗" "┃" "┣" "┛" "┻" "┫" "╋")
+
+# Same idea for fractals with 60 degree turns, using one bit per direction (6 bits, 64 characters):
+# 1 -> right, 2 -> down-right, 4 -> down-left, 8 -> left, 16 -> up-left, 32 -> up-right
+# There are no box-drawing characters for corners between a diagonal and a horizontal line (or between
+# the two diagonals, other than "╳" when they cross), so those combinations are drawn as a point for now.
+chars_60=(
+  " " "╺" "╲" "•" "╱" "•" "•" "•" # 0-7
+  "╸" "━" "•" "•" "•" "•" "•" "•" # 8-15
+  "╲" "•" "╲" "•" "•" "•" "•" "•" # 16-23
+  "•" "•" "•" "•" "•" "•" "•" "•" # 24-31
+  "╱" "•" "•" "•" "╱" "•" "•" "•" # 32-39
+  "•" "•" "•" "•" "•" "•" "•" "•" # 40-47
+  "•" "•" "•" "•" "•" "•" "╳" "•" # 48-55
+  "•" "•" "•" "•" "•" "•" "•" "•" # 56-63
+)
 
 # Available colors
 colors=(default red green yellow blue magenta cyan)
@@ -45,7 +60,7 @@ expand(){
       A|B|C|D|E)
         replacement=${!char}
         expanded+=${replacement} ;;
-      F|G)
+      F|G|f|g)
         replacement=${!char}
         expanded+=${replacement:-$char} ;;
       *)
@@ -55,18 +70,27 @@ expand(){
   axiom=$expanded
 }
 
-# Function that rotates the character 90 degrees clockwise or counterclockwise
+# Function that rotates the character one turn (90 or 60 degrees) clockwise or counterclockwise
 # Since the chracters are encoded in binary, this is achieved by multiplying or dividing by 2
 rotate_char(){
   local result
   case $1 in
     +) 
       (( result = $2 * 2 ))
-      (( result = result > 8 ? 1 : result ));;
+      (( result = result >= 2 ** num_directions ? 1 : result ));;
     -)
       (( result = $2 / 2 ))
-      (( result = result < 1 ? 8 : result ));;
+      (( result = result < 1 ? 2 ** (num_directions - 1) : result ));;
   esac
+  echo $result
+}
+
+# Function that rotates the character 180 degre i.e. half a full turn (two 90° tuns or three 60° turns)
+opposite_char(){
+  local i result=$1
+  for ((i=0; i<num_directions/2; i++)); do
+    result=$(rotate_char '+' $result)
+  done
   echo $result
 }
 
@@ -75,7 +99,7 @@ draw(){
   x=$initial_x
   y=$initial_y
   in_char=0
-  out_char=$(( 2 ** ( $initial_angle / 90) ))
+  out_char=$(( 2 ** ( $initial_angle / turn_angle) ))
   local i
   for ((i = 0; i < ${#axiom}; i++)); do
     case "${axiom:i:1}" in
@@ -85,10 +109,10 @@ draw(){
       -)
         out_char=$(rotate_char '-' $out_char)
         ;;
-      F)
+      F|G)
         forward true
         ;;
-      G)
+      f|g)
         forward false
     esac
   done
@@ -103,7 +127,7 @@ forward(){
   # Complete previous edge if necessary
   if [[ $draw_edge == true ]]; then
     print_char
-    in_char=$(rotate_char '+' "$(rotate_char '+' "$out_char")")
+    in_char=$(opposite_char $out_char)
   else
     if (( in_char != 0 )); then
       out_char=0 print_char
@@ -112,40 +136,93 @@ forward(){
   fi
 
   local i
-  case $out_char in
-    1)
-      (( x ++ ))
-      for ((i = 0; i < 2*segment_length-1; i++)); do
-        if [[ $draw_edge == true ]]; then
-          print_char
-        fi
+  if (( turn_angle == 90 )); then
+    case $out_char in
+      1)
         (( x ++ ))
-      done;;
-    2)
-      (( y ++ ))
-      for ((i = 0; i < segment_length-1; i++)); do
-        if [[ $draw_edge == true ]]; then
-          print_char
-        fi
+        for ((i = 0; i < 2*segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( x ++ ))
+        done;;
+      2)
         (( y ++ ))
-      done;;
-    4)
-      (( x -- ))
-      for ((i = 0; i < 2*segment_length-1; i++)); do
-        if [[ $draw_edge == true ]]; then
-          print_char
-        fi
+        for ((i = 0; i < segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( y ++ ))
+        done;;
+      4)
         (( x -- ))
-      done;;
-    8)
-      (( y -- ))
-      for ((i = 0; i < segment_length-1; i++)); do
-        if [[ $draw_edge == true ]]; then
-          print_char
-        fi
+        for ((i = 0; i < 2*segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( x -- ))
+        done;;
+      8)
         (( y -- ))
-      done;;
-  esac
+        for ((i = 0; i < segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( y -- ))
+        done;;
+    esac
+  elif (( turn_angle == 60 )); then
+    case $out_char in
+      1)
+        (( x++ ))
+        for ((i = 0; i < 2*segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( x ++ ))
+        done;;
+      2)
+        (( x++, y++ ))
+        for ((i = 0; i < segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( x++, y++ ))
+        done;;
+      4)
+        (( x--, y++ ))
+        for ((i = 0; i < segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( x--, y++ ))
+        done;;
+      8)
+        (( x-- ))
+        for ((i = 0; i < 2*segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( x-- ))
+        done;;
+      16)
+        (( x--, y-- ))
+        for ((i = 0; i < segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( x--, y-- ))
+        done;;
+      32)
+        (( x++, y-- ))
+        for ((i = 0; i < segment_length-1; i++)); do
+          if [[ $draw_edge == true ]]; then
+            print_char
+          fi
+          (( x++, y-- ))
+        done;;
+    esac
+  fi
 }
 
 # Function that prints a character with a certain color in the given position
@@ -279,15 +356,35 @@ case $fractal_name in
     scale_y=(1 1 3 8 18 38 78 158 318);;
   carpet)
     axiom="F"
-    F="F-F+F+F+G-F-F-F+F"
-    G="GGG"
+    F="F-F+F+F+f-F-F-F+F"
+    f="fff"
     initial_angle=0
     initial_x="0.0"
     initial_y="0.5"
     scale=3;;
+  triangle)
+    axiom="F--G--G"
+    F="F--G++F++G--F"
+    G="GG"
+    turn_angle=60
+    initial_angle=0
+    initial_x="0.0"
+    initial_y="1.0"
+    scale=2;;
   *) 
     echo "Unknown fractal name: $fractal_name"
     exit 1;;
+esac
+
+# Set the character table and number of possible directions based on the turn angle
+# Only 60 and 90 degrees are supported, for 120 degrees you can use '++' or '--' with 60 degrees
+turn_angle=${turn_angle:-90}
+num_directions=$(( 360 / turn_angle ))
+case $turn_angle in
+  90)
+    chars=("${chars_90[@]}");;
+  60)
+    chars=("${chars_60[@]}");;
 esac
 
 # If scale is defined it replaces the values for scale_x and scale_y
@@ -306,6 +403,9 @@ fi
 max_width=$(($(tput cols) - 1 ))
 max_height=$(($(tput lines) - 1 ))
 
+# Get the min segment length based on the turn angle. Since there are no proper corner character for 60 degrees angles segment_length=1 looks wrong
+(( min_segment_length = turn_angle == 60 ? 2 : 1 ))
+
 # Calculate segment length and order based on terminal size
 count=0
 len_y=$max_height
@@ -317,7 +417,7 @@ while (( count <= order )); do
     (( new_len_y = $max_height / $scale_y ** $count ))
   fi
 
-  if (( new_len_y < 1 )); then
+  if (( new_len_y < min_segment_length )); then
     break
   fi
 
@@ -327,7 +427,7 @@ while (( count <= order )); do
     (( new_len_x = $max_width/2 / $scale_x ** $count ))
   fi
 
-  if (( new_len_x < 1 )); then
+  if (( new_len_x < min_segment_length )); then
     break
   fi
 
