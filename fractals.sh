@@ -22,6 +22,9 @@ chars_60=(
   "•" "•" "•" "•" "•" "•" "•" "•" # 56-63
 )
 
+# Available fractals
+fractals=(hilbert levy carpet triangle)
+
 # Available colors
 colors=(default red green yellow blue magenta cyan)
 
@@ -48,6 +51,13 @@ full_string=""
 # Function that checks if a variable is an array
 is_array() {
   declare -p "$1" 2>/dev/null | grep -q 'declare \-a'
+}
+
+# Function that extracts a random element from an array
+get_random() {
+  local -n array=$1
+  random_item="${array[RANDOM % ${#array[@]}]}"
+  echo $random_item
 }
 
 # Function that expands the axiom string based on the rules
@@ -301,11 +311,13 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     -c|--color)
-      if [[ ! " ${colors[@]} " =~ " $2 " ]]; then
+      color="$2"
+      if [[ $color == "random" ]]; then
+        color=$(get_random colors)
+      elif [[ ! " ${colors[@]} " =~ " $2 " ]]; then
         echo "Invalid color: $2. Available colors: ${colors[*]}"
         exit 1
       fi
-      color="$2"
       shift 2
       ;;
     -f|--frame-rate)
@@ -316,8 +328,12 @@ while [[ $# -gt 0 ]]; do
       echo "Unknown option: $1"
       exit 1
       ;;
-    *) # First non-option = positional argument
-      fractal_name="$1"
+    *) 
+    # First non-option = positional argument
+      fractal_name="$1" 
+      if [[ $fractal_name == "random" ]]; then
+        fractal_name=$(get_random fractals)
+      fi
       shift
       break
       ;;
