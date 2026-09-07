@@ -330,12 +330,15 @@ while [[ $# -gt 0 ]]; do
       ;;
     *) 
     # First non-option = positional argument
+      if [[ -n ${fractal_name+x} ]]; then
+        echo "Unexpected positional argument: $1. Only one fractal name may be provided."
+        exit 1
+      fi
       fractal_name="$1" 
       if [[ $fractal_name == "random" ]]; then
         fractal_name=$(get_random fractals)
       fi
       shift
-      break
       ;;
   esac
 done
