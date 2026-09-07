@@ -380,7 +380,8 @@ case $fractal_name in
     initial_angle=0
     initial_x="0.0"
     initial_y="0.5"
-    scale=3;;
+    scale_x=3
+    scale_y=(1 2 8 26 80 242 728 2186 6560);;
   triangle)
     axiom="F--G--G"
     F="F--G++F++G--F"
