@@ -5,15 +5,19 @@
 # The characters to draw with. They are encoded in binary so they can be combined easily, one bit per possible direction:
 # 0001 = 1 -> "╺" (left), 0010 = 2 -> "╻" (down), 0100 = 4 -> "╸" (right), 1000 = 8 -> "╹" (up)
 # The rest of the characters are sums of these
-chars_90=(" " "╺" "╻" "┏" "╸" "━" "┓" "┳" "╹" "┗" "┃" "┣" "┛" "┻" "┫" "╋")
+chars_90_light=(" " "╶" "╷" "┌" "╴" "─" "┐" "┬" "╵" "└" "│" "├" "┘" "┴" "┤" "┼")
+chars_90_heavy=(" " "╺" "╻" "┏" "╸" "━" "┓" "┳" "╹" "┗" "┃" "┣" "┛" "┻" "┫" "╋")
+chars_90_rounded=(" " "╶" "╷" "╭" "╴" "─" "╮" "┬" "╵" "╰" "│" "├" "╯" "┴" "┤" "┼")
+chars_90_double=(" " "═" "║" "╔" "═" "═" "╗" "╦" "║" "╚" "║" "╠" "╝" "╩" "╣" "╬")
+chars_90_ascii=(" " "-" "|" "+" "-" "-" "+" "+" "|" "+" "|" "+" "+" "+" "+" "+")
 
 # Same idea for fractals with 60 degree turns, using one bit per direction (6 bits, 64 characters):
 # 1 -> right, 2 -> down-right, 4 -> down-left, 8 -> left, 16 -> up-left, 32 -> up-right
 # There are no box-drawing characters for corners between a diagonal and a horizontal line (or between
 # the two diagonals, other than "╳" when they cross), so those combinations are drawn as a point for now.
-chars_60=(
-  " " "╺" "╲" "•" "╱" "•" "•" "•" # 0-7
-  "╸" "━" "•" "•" "•" "•" "•" "•" # 8-15
+chars_60_light=(
+  " " "╶" "╲" "•" "╱" "•" "•" "•" # 0-7
+  "╴" "─" "•" "•" "•" "•" "•" "•" # 8-15
   "╲" "•" "╲" "•" "•" "•" "•" "•" # 16-23
   "•" "•" "•" "•" "•" "•" "•" "•" # 24-31
   "╱" "•" "•" "•" "╱" "•" "•" "•" # 32-39
@@ -21,9 +25,22 @@ chars_60=(
   "•" "•" "•" "•" "•" "•" "╳" "•" # 48-55
   "•" "•" "•" "•" "•" "•" "•" "•" # 56-63
 )
+chars_60_ascii=(
+  " " "-" "\\" "*" "/" "*" "*" "*" # 0-7
+  "-" "-" "*" "*" "*" "*" "*" "*" # 8-15
+  "\\" "*" "\\" "*" "*" "*" "*" "*" # 16-23
+  "*" "*" "*" "*" "*" "*" "*" "*" # 24-31
+  "/" "*" "*" "*" "/" "*" "*" "*" # 32-39
+  "*" "*" "*" "*" "*" "*" "*" "*" # 40-47
+  "*" "*" "*" "*" "*" "*" "X" "*" # 48-55
+  "*" "*" "*" "*" "*" "*" "*" "*" # 56-63
+)
 
 # Available fractals
 fractals=(hilbert levy carpet triangle)
+
+# Availavable line types
+line_types=(heavy light rounded double ascii)
 
 # Available colors
 colors=(default red green yellow blue magenta cyan)
@@ -259,7 +276,7 @@ print_char(){
   full_string="${full_string}\e[${y};${x}H${char}"
   
   # Print the character at the specified position
-  printf "\e[%d;%dH%b%s" $y $x $esc_code $char
+  printf "\e[%d;%dH%b%s" "$y" "$x" "$esc_code" "$char"
 }
 
 # Function that handles keyboard input. It is called every time a character is printed
@@ -314,8 +331,16 @@ while [[ $# -gt 0 ]]; do
       color="$2"
       if [[ $color == "random" ]]; then
         color=$(get_random colors)
-      elif [[ ! " ${colors[@]} " =~ " $2 " ]]; then
-        echo "Invalid color: $2. Available colors: ${colors[*]}"
+      elif [[ ! " ${colors[*]} " =~ " $color " ]]; then
+        echo "Invalid color: $color. Available colors: ${colors[*]}"
+        exit 1
+      fi
+      shift 2
+      ;;
+    -l|--line-type)
+      line_type="$2"
+      if [[ ! " ${line_types[*]} " =~ " $line_type " ]]; then
+        echo "Invalid line type: $line_type. Available line types: ${line_types[*]}"
         exit 1
       fi
       shift 2
@@ -345,6 +370,7 @@ done
 
 # Set default values
 color=${color:-default}
+line_type=${line_type:-light}
 order=${order:-8} # If order is not defined the max value will be used
 (( order = order > 8 ? 8 : order )) # Order can't be higher than 8
 frame_rate=${frame_rate:-20}
@@ -396,15 +422,28 @@ case $fractal_name in
     exit 1;;
 esac
 
-# Set the character table and number of possible directions based on the turn angle
+# Set the character table and number of possible directions based on the turn angle and line type
 # Only 60 and 90 degrees are supported, for 120 degrees you can use '++' or '--' with 60 degrees
 turn_angle=${turn_angle:-90}
 num_directions=$(( 360 / turn_angle ))
 case $turn_angle in
   90)
-    chars=("${chars_90[@]}");;
+    case $line_type in
+      light) chars=("${chars_90_light[@]}");;
+      heavy) chars=("${chars_90_heavy[@]}");;
+      rounded) chars=("${chars_90_rounded[@]}");;
+      double) chars=("${chars_90_double[@]}");;
+      ascii) chars=("${chars_90_ascii[@]}");;
+    esac;;
   60)
-    chars=("${chars_60[@]}");;
+    chars=("${chars_60_heavy[@]}")
+    case $line_type in
+      light) chars=("${chars_60_light[@]}");;
+      heavy|rounded|double)
+        echo "Wrong line type: $line_type. Only \"light\" and \"ascii\" are available for 60° fractals."
+        exit 1;;
+      ascii) chars=("${chars_60_ascii[@]}");;
+    esac;;
 esac
 
 # If scale is defined it replaces the values for scale_x and scale_y
@@ -423,8 +462,8 @@ fi
 max_width=$(($(tput cols) - 1 ))
 max_height=$(($(tput lines) - 1 ))
 
-# Get the min segment length based on the turn angle. Since there are no proper corner character for 60 degrees angles segment_length=1 looks wrong
-(( min_segment_length = turn_angle == 60 ? 2 : 1 ))
+# Get the min segment length based on the turn angle and line type. Since there are no proper corner characters for 60 degrees angles segment_length=1 looks wrong. Same goes for ASCII characters.
+(( min_segment_length = (turn_angle == 60 | line_type == ascii) ? 2 : 1 ))
 
 # Calculate segment length and order based on terminal size
 count=0
