@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2034
 
 ### GLOBAL VARIBLES ###
 # The characters to draw with. They are encoded in binary so they can be combined easily, one bit per possible direction:
@@ -42,11 +41,11 @@ fractals=(hilbert levy carpet triangle)
 # Availavable line types
 line_types=(heavy light rounded double ascii)
 
+# Predefined frame rates
+frame_rates=(5 10 20 50 100 200 500 1000 2000 5000)
+
 # Available colors
 colors=(default red green yellow blue magenta cyan)
-
-# Predefined frame rates
-frame_rates=(5 10 20 40 80)
 
 # Escape sequences associated with each color
 declare -A color_esc_codes
@@ -75,6 +74,56 @@ get_random() {
   local -n array=$1
   random_item="${array[RANDOM % ${#array[@]}]}"
   echo $random_item
+}
+
+# Function that gets the next or previous element of an array.
+# For strings, it finds the index of the current value and adds (or substracts) 1 to it with wrapping.
+# For numbers, it returns the first value that is greater (or less than) the current one and doesn't wrap.
+cycle() {
+  local -n array=$2
+  local -n current=$3
+  if [[ "$current" =~ ^-?[0-9]+$ ]]; then
+   case $1 in 
+      +)
+        for item in "${array[@]}"; do
+          if (( item > current )); then
+            current=$item
+            break
+          fi
+        done
+      ;;
+      -)
+        for (( idx=${#array[@]}-1; idx>=0; idx-- )); do
+          item=${array[idx]}
+          if (( item < current )); then
+            current=$item
+            break
+          fi
+        done
+      ;;
+    esac
+  else
+    case $1 in 
+      +)
+        for idx in "${!array[@]}"; do
+          if [[ "${array[$idx]}" == "$current" ]]; then
+            next_idx=$(( (idx + 1) % ${#array[@]} ))
+            current="${array[$next_idx]}"
+            break
+          fi
+        done
+      ;;
+      -)
+        for idx in "${!array[@]}"; do
+          if [[ "${array[$idx]}" == "$current" ]]; then
+            next_idx=$(( (idx - 1) % ${#array[@]} ))
+            current="${array[$next_idx]}"
+            break
+          fi
+        done
+      ;;
+    esac
+  fi
 }
 
 # Function that expands the axiom string based on the rules
@@ -285,26 +334,17 @@ handle_controls(){
   case "$REPLY" in
     c) 
       # Cycle to the next color in the colors array
-      for idx in "${!colors[@]}"; do
-        if [[ "${colors[$idx]}" == "$color" ]]; then
-          next_idx=$(( (idx + 1) % ${#colors[@]} ))
-          color="${colors[$next_idx]}"
-          break
-        fi
-      done
+      cycle + colors color
       # Reprint the fractal with the new color
       esc_code="${color_esc_codes[$color]}"
       printf "$esc_code$full_string";;
-    f)
-      # Cycle between predefined frame rates
-      next_frame_rate=${frame_rates[0]}
-      for rate in "${frame_rates[@]}"; do
-        if (( rate > frame_rate )); then
-          next_frame_rate=$rate
-          break
-        fi
-      done
-      frame_rate=$next_frame_rate
+    +)
+      # Increase frame rate
+      cycle + frame_rates frame_rate
+      frame_delay=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }');;
+    -)
+      # Decrease frame rate
+      cycle - frame_rates frame_rate
       frame_delay=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }');;
     q)
       quit;;
@@ -376,6 +416,10 @@ order=${order:-8} # If order is not defined the max value will be used
 frame_rate=${frame_rate:-20}
 if [[ ! $frame_rate =~ ^[1-9][0-9]*$ ]]; then
   echo "Invalid frame rate: $frame_rate. Frame rate must be a positive integer."
+  exit 1
+fi
+if [[ $frame_rate -gt 5000 ]]; then
+  echo "Invalid frame rate: $frame_rate. Maximum frame rate is 5000."
   exit 1
 fi
 frame_delay=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }')
@@ -550,6 +594,7 @@ done
 # Draw the fractal
 draw
 
+# Keep handling controls after done drawing
 while true; do
   handle_controls
 done
