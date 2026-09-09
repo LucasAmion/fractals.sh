@@ -360,9 +360,22 @@ handle_controls(){
       else
         pause=
       fi;;
+    r)
+      restart;;
     q)
       quit;;
   esac
+}
+
+# Clears the screen and starts redrawing from the begining, preserving all current options.
+# Replaces the current process instead of returning and trying to call draw again.
+restart() {
+  exec "$BASH" "$0" \
+    --order "$order" \
+    --color "$color" \
+    --line-type "$line_type" \
+    --frame-rate "$frame_rate" \
+    "$fractal_name"
 }
 
 # Quit the program
