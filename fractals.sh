@@ -35,16 +35,11 @@ chars_60_ascii=(
   "*" "*" "*" "*" "*" "*" "*" "*" # 56-63
 )
 
-# Available fractals
+# Available values for each option
 fractals=(hilbert levy carpet triangle)
-
-# Availavable line types
 line_types=(heavy light rounded double ascii)
-
-# Predefined frame rates
 frame_rates=(5 10 20 50 100 200 500 1000 2000 5000)
-
-# Available colors
+orders=(0 1 2 3 4 5 6 7 8)
 colors=(default red green yellow blue magenta cyan)
 
 # Escape sequences associated with each color
@@ -350,6 +345,14 @@ handle_controls(){
       # Reprint the fractal with the new color
       esc_code="${color_esc_codes[$color]}"
       printf "$esc_code$full_string";;
+    $'\e[A')
+      # Increase order
+      cycle + orders order
+      restart;;
+    $'\e[B')
+      # Decrease order
+      cycle - orders order
+      restart;;
     $'\e[C')
       # Switch to next fractal when pressing the right arrow key
       cycle + fractals fractal_name
@@ -628,7 +631,7 @@ for (( i=0; i < ${#axiom}; i++ )); do
   fi
 done
 if [ $number_of_Fs = 0 ]; then
-  (( order ++ ))
+  expand
 fi
 
 # Expand the axiom
