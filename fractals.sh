@@ -336,7 +336,7 @@ handle_controls(){
     read -s -n 1 2>/dev/null # If pause is true we use read with no timeout
   fi
   case "$REPLY" in
-    c) 
+    c|C) 
       # Cycle to the next color in the colors array
       cycle + colors color
       # Reprint the fractal with the new color
@@ -350,7 +350,7 @@ handle_controls(){
       # Decrease frame rate
       cycle - frame_rates frame_rate
       timeout=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }');;
-    p)
+    p|P)
       # Pause until p is pressed again
       if [[ ! $pause ]]; then
         pause=true
@@ -360,9 +360,9 @@ handle_controls(){
       else
         pause=
       fi;;
-    r)
+    r|R)
       restart;;
-    q)
+    q|Q)
       quit;;
   esac
 }
