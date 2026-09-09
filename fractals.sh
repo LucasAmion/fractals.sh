@@ -335,13 +335,31 @@ handle_controls(){
   else
     read -s -n 1 2>/dev/null # If pause is true we use read with no timeout
   fi
-  case "$REPLY" in
+
+  # Handle escape character
+  key=$REPLY
+  if [[ $key == $'\e' ]]; then
+    read -s -n 2 -t 0.05 key_suffix 2>/dev/null
+    key+=$key_suffix
+  fi
+
+  case "$key" in
     c|C) 
       # Cycle to the next color in the colors array
       cycle + colors color
       # Reprint the fractal with the new color
       esc_code="${color_esc_codes[$color]}"
       printf "$esc_code$full_string";;
+    $'\e[C')
+      # Switch to next fractal when pressing the right arrow key
+      cycle + fractals fractal_name
+      order=  # Unset order to use the default
+      restart;;
+    $'\e[D')
+      # Switch to previous fractal when pressing the left arrow key
+      cycle - fractals fractal_name
+      order=  # Unset order to use the default
+      restart;;
     +)
       # Increase frame rate
       cycle + frame_rates frame_rate
@@ -354,12 +372,13 @@ handle_controls(){
       # Pause until p is pressed again
       if [[ ! $pause ]]; then
         pause=true
-        while [[ $pause == true ]]; do
+        while [[ $pause ]]; do
           handle_controls
         done
       else
         pause=
-      fi;;
+      fi
+      ;;
     r|R)
       restart;;
     q|Q)
