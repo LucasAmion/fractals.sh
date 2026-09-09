@@ -330,7 +330,11 @@ print_char(){
 
 # Function that handles keyboard input. It is called every time a character is printed
 handle_controls(){
-  read -s -t "$frame_delay" -n 1 2>/dev/null # Read input and pause according to frame rate
+  if [[ ! $pause ]]; then
+    read -s -n 1 -t "$timeout" 2>/dev/null # Read input and pause according to frame rate
+  else
+    read -s -n 1 2>/dev/null # If pause is true we use read with no timeout
+  fi
   case "$REPLY" in
     c) 
       # Cycle to the next color in the colors array
@@ -341,11 +345,21 @@ handle_controls(){
     +)
       # Increase frame rate
       cycle + frame_rates frame_rate
-      frame_delay=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }');;
+      timeout=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }');;
     -)
       # Decrease frame rate
       cycle - frame_rates frame_rate
-      frame_delay=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }');;
+      timeout=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }');;
+    p)
+      # Pause until p is pressed again
+      if [[ ! $pause ]]; then
+        pause=true
+        while [[ $pause == true ]]; do
+          handle_controls
+        done
+      else
+        pause=
+      fi;;
     q)
       quit;;
   esac
@@ -422,7 +436,7 @@ if [[ $frame_rate -gt 5000 ]]; then
   echo "Invalid frame rate: $frame_rate. Maximum frame rate is 5000."
   exit 1
 fi
-frame_delay=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }')
+timeout=$(awk -v frame_rate="$frame_rate" 'BEGIN { printf "%.6f", 1 / frame_rate }')
 fractal_name=${fractal_name:-hilbert}
 
 # Set L-system related variables for each fractal name
