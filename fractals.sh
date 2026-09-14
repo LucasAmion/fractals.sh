@@ -299,7 +299,9 @@ forward(){
 # Function that prints a character with a certain color in the given position
 print_char(){
   # Handle keyboard input
-  handle_controls
+  if [[ ! $instant ]]; then
+    handle_controls
+  fi
 
   # Get the character currently at the given screen position
   position="$x,$y"
@@ -323,12 +325,32 @@ print_char(){
   printf "\e[%d;%dH%b%s" "$y" "$x" "$esc_code" "$char"
 }
 
+# Erase the fractal one character at a time, starting from the end 
+reverse(){
+  # This regular expresions matches the last character on the string, including its escape sequences (ie. \e[<y>;<x>H<glyph>)
+  local item_re='(.*)\\e\[([0-9]+);([0-9]+)H(.)$' 
+
+  while [[ $full_string =~ $item_re ]]; do
+    local remaining=${BASH_REMATCH[1]} # full string witout the last character 
+    
+    # Position of the last character
+    local y=${BASH_REMATCH[2]}
+    local x=${BASH_REMATCH[3]}
+    
+    handle_controls
+    full_string=$remaining
+    
+    # Print a space at the postion of the last character to erase it
+    printf '\e[%d;%dH ' "$y" "$x"
+  done
+}
+
 # Function that handles keyboard input. It is called every time a character is printed
 handle_controls(){
-  if [[ ! $pause ]]; then
-    read -s -n 1 -t "$timeout" 2>/dev/null # Read input and pause according to frame rate
-  else
+  if [[ $pause ]]; then
     read -s -n 1 2>/dev/null # If pause is true we use read with no timeout
+  else
+    read -s -n 1 -t "$timeout" 2>/dev/null # Read input and pause according to frame rate
   fi
 
   # Handle escape character
@@ -397,6 +419,9 @@ restart() {
     --color "$color" \
     --line-type "$line_type" \
     --frame-rate "$frame_rate" \
+    ${instant:+--instant} \
+    ${cycle:+--cycle} \
+    ${reverse:+--reverse} \
     "$fractal_name"
 }
 
@@ -437,6 +462,30 @@ while [[ $# -gt 0 ]]; do
     -f|--frame-rate)
       frame_rate="$2"
       shift 2
+      ;;
+    -i|--instant)
+      if [[ $cycle || $reverse ]]; then
+        echo "Invalid flag combination: --instant doesn't work with --cycle or --reverse"
+        exit 1
+      fi
+      instant=true
+      shift 1
+      ;;
+    -C|--cycle)
+      if [[ $instant ]]; then
+        echo "Invalid flag combination: --instant doesn't work with --cycle or --reverse"
+        exit 1
+      fi
+      cycle=true
+      shift 1
+      ;;
+    -r|--reverse)
+      if [[ $instant ]]; then
+        echo "Invalid flag combination: --instant doesn't work with --cycle or --reverse"
+        exit 1
+      fi
+      reverse=true
+      shift 1
       ;;
     -*)
       echo "Unknown option: $1"
@@ -642,8 +691,18 @@ done
 
 # Draw the fractal
 draw
+if [[ $reverse || $cycle ]]; then
+  if [[ $reverse ]]; then
+    reverse
+  fi
+  if [[ $cycle ]]; then
+    cycle + fractals fractal_name
+  fi
+  restart
+fi
 
 # Keep handling controls after done drawing
+pause=true # The fractal has already finished drawing so we don't need to keep enforcing a timeout
 while true; do
   handle_controls
 done
