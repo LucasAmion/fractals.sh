@@ -36,7 +36,7 @@ chars_60_ascii=(
 )
 
 # Available values for each option
-fractals=(hilbert levy carpet triangle)
+fractals=(hilbert levy carpet triangle snowflake antisnowflake)
 line_types=(heavy light rounded double ascii)
 frame_rates=(5 10 20 50 100 200 500 1000 2000 5000)
 orders=(0 1 2 3 4 5 6 7 8)
@@ -559,6 +559,23 @@ case $fractal_name in
     initial_x="0.0"
     initial_y="1.0"
     scale=2;;
+  snowflake)
+    axiom="F--F--F"
+    F="F+F--F+F"
+    turn_angle=60
+    initial_angle=0
+    initial_x="0.0"
+    initial_y=(1 3 9 27 81 243 729 2187 6561)
+    scale_x=3
+    scale_y=(1 4 12 36 108 324 972 2916 8748);;
+  antisnowflake)
+    axiom="F--F--F"
+    F="F-F++F-F"
+    turn_angle=60
+    initial_angle=0
+    initial_x="0.0"
+    initial_y="1.0"
+    scale=3;;
   *) 
     echo "Unknown fractal name: $fractal_name"
     exit 1;;
