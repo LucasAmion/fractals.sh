@@ -59,6 +59,99 @@ declare -A screen_chars
 full_string=""
 
 ### FUNCTION DEFINITIONS ###
+show_help() {
+  cat <<'EOF'
+Usage: fractals.sh [OPTIONS] [FRACTAL]
+
+Draw animated fractals in the terminal. The drawing is sized to fit the
+terminal; when it finishes, it stays on screen until you restart or quit.
+FRACTAL defaults to hilbert. Use random to choose a fractal at startup.
+
+Options:
+  -h, --help              Show this help and exit.
+  -o, --order N           Set the requested recursion depth (0-8).
+                         Higher orders add detail. Values above 8 are capped;
+                         the order is reduced further if needed to fit.
+                         Default: the highest order that fits, up to 8.
+  -c, --color COLOR       Set the drawing color (default: default).
+                         Values: default, red, green, yellow, blue, magenta,
+                         cyan, random. default uses the terminal's normal
+                         text color; random chooses a color at startup.
+  -l, --line-type TYPE    Set the line style (default: light).
+                         Values: light (thin), heavy (thick), rounded
+                         (rounded corners), double (double lines), ascii
+                         (plain ASCII characters).
+                         Fractals with 60° turns (eg. triangle, snowflake,
+                         antisnowflake) support only light and ascii. Use
+                         either when cycling through all fractals.
+  -f, --frame-rate N      Set the animation rate (default: 20).
+                         Accepts integers from 1 to 5000. Each character
+                         drawn or erased waits 1/N seconds for input;
+                         actual speed also depends on rendering overhead.
+  -i, --instant           Draw without animation delays. Keyboard controls
+                         are available after the drawing finishes.
+                         Cannot be combined with --cycle or --reverse.
+  -C, --cycle             Draw each fractal in turn, then loop back to the
+                         first. Starts with the selected fractal.
+  -r, --reverse           After drawing, erase one character at a time in
+                         reverse drawing order, then draw again. With
+                         --cycle, erase before moving to the next fractal.
+
+Fractals:
+  hilbert        Hilbert curve (default).
+                 Described by David Hilbert in 1891, following Giuseppe
+                 Peano's 1890 space-filling curve. Its repeated right-angle
+                 turns approach a curve that fills a square in the limit.
+
+  levy           Levy C curve.
+                 Named after Paul Levy, who studied its self-similarity in
+                 1938, following work by Ernesto Cesaro (1906) and Georg
+                 Faber (1910). Repeated bends form a curling, C-like shape.
+
+  carpet         Sierpinski carpet.
+                 Described by Waclaw Sierpinski in 1916. Divide a square
+                 into nine smaller squares, remove the center, and repeat
+                 on the remaining eight to create a lace-like pattern.
+
+  triangle       Sierpinski triangle (also called the Sierpinski gasket).
+                 Described by Waclaw Sierpinski in 1915, though similar
+                 patterns appeared in art centuries earlier. Repeatedly
+                 removing central triangles leaves three smaller copies.
+
+  snowflake      Koch snowflake.
+                 Based on Helge von Koch's 1904 curve, an early example of
+                 a continuous curve with no tangent anywhere. Adding
+                 triangular bumps gives infinite perimeter but finite area
+                 in the limit.
+
+  antisnowflake  Koch antisnowflake.
+                 An inward-facing variant of Koch's 1904 construction:
+                 triangular notches point into the original triangle
+                 instead of outward, producing a snowflake's counterpart.
+
+  random         Choose one of the six fractals at startup.
+
+Keyboard controls:
+  Left / Right   Switch to the previous / next fractal, resetting its order
+                 to the highest that fits the terminal (up to 8).
+  Up / Down      Increase / decrease the order and redraw (subject to fit).
+  + / -          Increase / decrease the animation rate through presets:
+                 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000.
+  c              Cycle through colors without restarting the drawing.
+  p              Pause / resume animation.
+  r              Restart the current fractal with the current options.
+  q              Quit, clear the screen, and restore the cursor and echo.
+                 Letter controls also accept uppercase.
+
+Examples:
+  fractals.sh
+  fractals.sh --order 3 --color cyan hilbert
+  fractals.sh --instant --line-type ascii triangle
+  fractals.sh --cycle --reverse --frame-rate 100
+  fractals.sh --color random random
+EOF
+}
+
 # Function that checks if a variable is an array
 is_array() {
   declare -p "$1" 2>/dev/null | grep -q 'declare \-a'
@@ -437,6 +530,10 @@ quit() {
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
     -o|--order)
       order="$2"
       shift 2
