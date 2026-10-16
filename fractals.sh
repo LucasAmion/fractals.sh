@@ -62,10 +62,14 @@ full_string=""
 show_help() {
   cat <<'EOF'
 Usage: fractals.sh [OPTIONS] [FRACTAL]
+       fractals.sh [OPTIONS] < definition.lsys
+       cat definition.lsys | fractals.sh [OPTIONS]
 
 Draw animated fractals in the terminal. The drawing is sized to fit the
 terminal; when it finishes, it stays on screen until you restart or quit.
-FRACTAL defaults to hilbert. Use random to choose a fractal at startup.
+Provide either a built-in FRACTAL name or one custom definition on standard
+input, not both. FRACTAL defaults to hilbert. Use random to choose a
+fractal at startup.
 
 Options:
   -h, --help              Show this help and exit.
@@ -131,9 +135,42 @@ Fractals:
 
   random         Choose one of the six fractals at startup.
 
+Custom definition format:
+  Definitions use case-sensitive key=value lines. Provide one definition.
+  Blank lines and # or ; comments, including trailing comments, are allowed.
+  Values may have matching enclosing single or double quotes; quotes are
+  literal delimiters and shell expressions are never evaluated.
+
+  axiom and either scale or both scale_x and scale_y are required.
+  turn_angle defaults to 90; angle is its alias. Angles are always degrees,
+  unlike Fractint. initial_angle defaults to 0, is normalized, and must be a
+  multiple of the turn angle. initial_x and initial_y default to 0.0.
+  Scalar initial positions are fractions of the fractal size. Nine-entry
+  integer arrays are absolute step offsets for orders 0 through 8.
+  Scalar scales are positive integer growth factors raised to the order;
+  nine-entry positive integer arrays give the extent for each order 0 through
+  8. scale overrides scale_x and scale_y when supplied.
+
+  The alphabet is A-G, f, g, + and -. F and G draw; f and g move without
+  drawing; A-E are non-drawing rewrite symbols. Missing A-E rules erase the
+  symbol, while missing F, G, f, or g rules preserve it. Branch syntax is not
+  supported.
+
+  Equivalent Hilbert definition:
+    axiom=A
+    A=+BF-AFA-FB+
+    B=-AF+BFB+FA-
+    turn_angle=90
+    initial_angle=0
+    initial_x=0.0
+    initial_y=0.0
+    scale=(1 3 7 15 31 63 127 255 511)
+
 Keyboard controls:
   Left / Right   Switch to the previous / next fractal, resetting its order
-                 to the highest that fits the terminal (up to 8).
+                 to the highest that fits the terminal (up to 8). A custom
+                 definition on standard input is added to the end of the
+                 fractal list for the session.
   Up / Down      Increase / decrease the order and redraw (subject to fit).
   + / -          Increase / decrease the animation rate through presets:
                  5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000.
@@ -149,7 +186,103 @@ Examples:
   fractals.sh --instant --line-type ascii triangle
   fractals.sh --cycle --reverse --frame-rate 100
   fractals.sh --color random random
+  fractals.sh --instant < definition.lsys
+  cat definition.lsys | fractals.sh --order 4
 EOF
+}
+
+definition_error() {
+  printf 'Invalid stdin definition (line %s): %s\n' "$definition_line" "$1" >&2
+  return 1
+}
+
+parse_custom_definition() {
+  local line field value quote
+  local definition_line=0
+  local -A seen=()
+  unset axiom A B C D E F G f g scale scale_x scale_y initial_x initial_y initial_angle turn_angle
+  initial_x=0.0
+  initial_y=0.0
+  initial_angle=0
+  turn_angle=90
+  while IFS= read -r line || [[ -n $line ]]; do
+    (( definition_line++ ))
+    line=${line%%[;#]*}
+    line=${line#"${line%%[![:space:]]*}"}
+    line=${line%"${line##*[![:space:]]}"}
+    [[ -z $line ]] && continue
+    if [[ $line != *=* ]]; then
+      definition_error 'Expected key=value.'
+      return 1
+    fi
+    field=${line%%=*}
+    field=${field%"${field##*[![:space:]]}"}
+    value=${line#*=}
+    value=${value#"${value%%[![:space:]]*}"}
+    case $field in
+      angle) field=turn_angle ;;
+      axiom|turn_angle|initial_angle|initial_x|initial_y|scale|scale_x|scale_y|A|B|C|D|E|F|G|f|g) ;;
+      *) definition_error "Unknown field: $field."; return 1 ;;
+    esac
+    if [[ ${seen[$field]+present} ]]; then
+      definition_error "Duplicate field: $field."
+      return 1
+    fi
+    seen[$field]=$definition_line
+    quote=${value:0:1}
+    if [[ $quote == \" || $quote == \' ]]; then
+      if (( ${#value} < 2 )) || [[ ${value: -1} != "$quote" ]]; then
+        definition_error "Unterminated quoted value for $field."
+        return 1
+      fi
+      value=${value:1:${#value}-2}
+    fi
+    case $field in
+      axiom|A|B|C|D|E|F|G|f|g)
+        [[ $value =~ ^[A-Gfg+-]+$ ]] || { definition_error "$field must be a nonempty string of A-G, f, g, + and -."; return 1; }
+        printf -v "$field" '%s' "$value"
+        ;;
+      turn_angle)
+        [[ $value == 60 || $value == 90 ]] || { definition_error 'turn_angle (or angle) must be 60 or 90 degrees.'; return 1; }
+        turn_angle=$value
+        ;;
+      initial_angle)
+        [[ $value =~ ^-?[0-9]+$ ]] || { definition_error 'initial_angle must be an integer.'; return 1; }
+        initial_angle=$(( (value % 360 + 360) % 360 ))
+        ;;
+      scale|scale_x|scale_y)
+        if [[ $value =~ ^\([[:space:]]*([1-9][0-9]*([[:space:]]+[1-9][0-9]*){8})[[:space:]]*\)$ ]]; then
+          read -r -a "$field" <<< "${BASH_REMATCH[1]}"
+        elif [[ $value =~ ^[1-9][0-9]*$ ]]; then
+          printf -v "$field" '%s' "$value"
+        else
+          definition_error "$field must be a positive integer or a nine-entry array."
+          return 1
+        fi
+        ;;
+      initial_x|initial_y)
+        if [[ $value =~ ^\([[:space:]]*(-?[0-9]+([[:space:]]+-?[0-9]+){8})[[:space:]]*\)$ ]]; then
+          read -r -a "$field" <<< "${BASH_REMATCH[1]}"
+        elif [[ $value =~ ^-?[0-9]+(\.[0-9]+)?$ ]]; then
+          printf -v "$field" '%s' "$value"
+        else
+          definition_error "$field must be a decimal number or a nine-entry integer array."
+          return 1
+        fi
+        ;;
+    esac
+  done <<< "$1"
+  [[ -n $axiom ]] || { definition_error 'A nonempty axiom is required.'; return 1; }
+  if [[ ! ${seen[scale]+present} ]] && { [[ ! ${seen[scale_x]+present} ]] || [[ ! ${seen[scale_y]+present} ]]; }; then
+    definition_error 'Provide scale, or both scale_x and scale_y.'
+    return 1
+  fi
+  if (( initial_angle % turn_angle != 0 )); then
+    definition_line=${seen[initial_angle]}
+    definition_error 'initial_angle must be a multiple of turn_angle.'
+    return 1
+  fi
+  return 0
 }
 
 # Function that checks if a variable is an array
@@ -603,6 +736,25 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -p /dev/stdin || -f /dev/stdin ]]; then
+  if [[ -n ${fractal_name+x} ]]; then
+    printf '%s\n' 'Provide either a definition on stdin or a positional fractal name, not both.' >&2
+    exit 1
+  fi
+  custom_definition=
+  if IFS= read -r -d '' custom_definition; then
+    printf '%s\n' 'Invalid stdin definition: NUL bytes are not supported.' >&2
+    exit 1
+  fi
+  exec </dev/tty
+  export custom_definition
+  fractal_name=custom
+fi
+
+if [[ -n ${custom_definition+x} ]]; then
+  fractals+=(custom)
+fi
+
 # Set default values
 color=${color:-default}
 line_type=${line_type:-light}
@@ -673,6 +825,12 @@ case $fractal_name in
     initial_x="0.0"
     initial_y="1.0"
     scale=3;;
+  custom)
+    if [[ -z ${custom_definition+x} ]]; then
+      echo "Unknown fractal name: $fractal_name"
+      exit 1
+    fi
+    parse_custom_definition "$custom_definition" || exit 1;;
   *) 
     echo "Unknown fractal name: $fractal_name"
     exit 1;;
